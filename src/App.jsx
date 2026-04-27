@@ -1,28 +1,32 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
-import Dashboard from './pages/Dashboard'; 
+import Dashboard from './pages/Dashboard';
 import Books from './pages/Books';
 import Categories from './pages/Categories';
 import Borrows from './pages/Borrows';
-import Reviews from './pages/Reviews';
 import Auth from './pages/Auth';
 
 // 1. Tạo chốt chặn bảo vệ (ProtectedRoute)
 const ProtectedRoute = ({ children }) => {
   const userData = localStorage.getItem('user');
-  
-  // Nếu LocalStorage trống rỗng, ép về trang login ngay
-  if (!userData) {
-    return <Navigate to="/login" replace />;
+
+  // 1. Dùng biến trung gian để lưu kết quả kiểm tra
+  let isLogged = false;
+
+  // 2. Chỉ thực hiện logic "xử lý dữ liệu" trong try/catch
+  if (userData) {
+    try {
+      const user = JSON.parse(userData);
+      if (user && (user.token || user.accessToken)) {
+        isLogged = true;
+      }
+    } catch {
+      isLogged = false;
+    }
   }
 
-  try {
-    const user = JSON.parse(userData);
-    // Kiểm tra xem có token hay không (tùy vào cấu trúc res của chủ nhân)
-    if (!user || (!user.token && !user.accessToken)) {
-      return <Navigate to="/login" replace />;
-    }
-  } catch (e) {
+  // 3. Lệnh return JSX PHẢI nằm ngoài try/catch
+  if (!isLogged) {
     return <Navigate to="/login" replace />;
   }
 
@@ -45,7 +49,7 @@ function App() {
                 <Route path="/books" element={<Books />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/borrows" element={<Borrows />} />
-                <Route path="/reviews" element={<Reviews />} />
+
                 {/* Trang 404 hoặc mặc định */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

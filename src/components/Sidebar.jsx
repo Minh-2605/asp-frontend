@@ -1,33 +1,48 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Book, 
-  History, 
-  Tags, 
-  Star, 
-  LogOut, 
-  Library 
+import {
+  LayoutDashboard,
+  Book,
+  History,
+  Tags,
+  Star,
+  LogOut,
+  Library
 } from 'lucide-react';
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Danh sách menu đầy đủ các tính năng
+  // 1. Lấy thông tin user và role từ localStorage
+  const getRole = () => {
+    const data = localStorage.getItem('user');
+    if (!data) return 'user';
+    try {
+      const u = JSON.parse(data);
+      // Trả về role viết thường để dễ so sánh
+      return (u.role || u.Role || 'user').toString().toLowerCase();
+    } catch { return 'user'; }
+  };
+
+  const userRole = getRole();
+  const isAdmin = userRole === 'admin';
+
+  // 2. Định nghĩa danh sách menu
   const menuItems = [
-    { icon: <LayoutDashboard size={20}/>, label: 'Dashboard', path: '/' },
-    { icon: <Book size={20}/>, label: 'Quản lý Sách', path: '/books' },
-    { icon: <Tags size={20}/>, label: 'Thể loại', path: '/categories' },
-    { icon: <History size={20}/>, label: 'Đơn mượn', path: '/borrows' },
-    { icon: <Star size={20}/>, label: 'Đánh giá', path: '/reviews' },
+    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/', roles: ['admin'] },
+    { icon: <Book size={20} />, label: 'Sách', path: '/books', roles: ['admin', 'user'] },
+    { icon: <Tags size={20} />, label: 'Thể loại', path: '/categories', roles: ['admin'] },
+    { icon: <History size={20} />, label: 'Đơn mượn', path: '/borrows', roles: ['admin', 'user'] },
   ];
 
-  // Hàm xử lý đăng xuất
+  // 3. Lọc menu dựa trên role hiện tại
+  const filteredMenu = menuItems.filter(item => item.roles.includes(userRole));
+
   const handleLogout = () => {
-    if (window.confirm("Chủ nhân có chắc chắn muốn đăng xuất không?")) {
-      localStorage.removeItem('user'); // Xóa sạch dấu vết login
-      navigate('/login'); // Lôi người dùng ra trang login ngay lập tức
+    if (window.confirm("Bạn có chắc chắn muốn đăng xuất không?")) {
+      localStorage.removeItem('user');
+      navigate('/login');
     }
   };
 
@@ -37,25 +52,26 @@ const Sidebar = () => {
       <div className="mb-10 px-4 py-2 bg-gradient-to-r from-blue-600/20 to-transparent rounded-2xl border border-blue-500/20">
         <div className="flex items-center gap-2 mb-1">
           <Library size={24} className="text-blue-400" />
-          <h2 className="text-lg font-black text-white uppercase tracking-tighter">Quản lý Thư viện</h2>
+          <h2 className="text-lg font-black text-white uppercase tracking-tighter">Thư viện</h2>
         </div>
-        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Administrator Area</p>
+        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+          {isAdmin ? "Ban Quản Trị" : "Cổng Thành Viên"}
+        </p>
       </div>
-      
-      {/* Navigation Links */}
+
+      {/* Navigation Links - Chỉ map danh sách đã lọc */}
       <nav className="flex-1 space-y-1">
-        {menuItems.map((item, index) => {
+        {filteredMenu.map((item, index) => {
           const isActive = location.pathname === item.path;
-          
+
           return (
-            <Link 
-              key={index} 
-              to={item.path} 
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
-                isActive 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' 
+            <Link
+              key={index}
+              to={item.path}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
                 : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-              }`}
+                }`}
             >
               <span className={`${isActive ? 'scale-110' : 'group-hover:scale-110'} transition-transform`}>
                 {item.icon}
@@ -66,9 +82,9 @@ const Sidebar = () => {
         })}
       </nav>
 
-      {/* Nút Đăng xuất - Nằm ở cuối Sidebar */}
+      {/* Nút Đăng xuất */}
       <div className="pt-4 border-t border-slate-800">
-        <button 
+        <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-300 font-bold text-sm"
         >
@@ -76,7 +92,7 @@ const Sidebar = () => {
           <span>Đăng xuất</span>
         </button>
         <p className="mt-4 text-[10px] text-center text-slate-600 font-medium italic">
-          © 2026 Admin Panel
+          © 2026 {isAdmin ? "Admin Panel" : "Thư Viện"}
         </p>
       </div>
     </div>

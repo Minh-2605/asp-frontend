@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useEffect, useState } from 'react';
 import axiosClient from '../api/axiosClient';
 import { Plus, Edit, Trash2, FolderTree, AlertCircle, Loader2, X, Save } from 'lucide-react';
@@ -7,7 +8,7 @@ const Categories = () => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Trạng thái phục vụ chỉnh sửa
   const [editingId, setEditingId] = useState(null);
 
@@ -32,9 +33,9 @@ const Categories = () => {
     try {
       if (editingId) {
         // Gửi lệnh PUT để cập nhật
-        await axiosClient.put(`/Categories/${editingId}`, { 
-          Id: editingId, 
-          Name: name 
+        await axiosClient.put(`/Categories/${editingId}`, {
+          Id: editingId,
+          Name: name
         });
         setEditingId(null); // Thoát chế độ sửa
       } else {
@@ -86,26 +87,26 @@ const Categories = () => {
             {editingId ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input 
+            <input
               className="w-full border-2 border-slate-100 bg-white p-3 rounded-2xl outline-none focus:border-blue-500 transition-all text-sm"
               placeholder="Tên danh mục..."
-              value={name} 
-              onChange={e => setName(e.target.value)} 
+              value={name}
+              onChange={e => setName(e.target.value)}
               required
             />
             <div className="flex gap-2">
               <button className={`flex-1 text-white py-3 rounded-2xl font-bold transition-all active:scale-95 flex justify-center items-center gap-2 ${editingId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                {editingId ? <Save size={18}/> : <Plus size={18}/>}
+                {editingId ? <Save size={18} /> : <Plus size={18} />}
                 {editingId ? 'Cập nhật' : 'Thêm ngay'}
               </button>
-              
+
               {editingId && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={cancelEdit}
                   className="bg-slate-200 text-slate-600 px-4 rounded-2xl hover:bg-slate-300 transition-all"
                 >
-                  <X size={18}/>
+                  <X size={18} />
                 </button>
               )}
             </div>
@@ -128,17 +129,17 @@ const Categories = () => {
                   <td className="p-5 text-slate-400 font-mono text-xs">#{cat.id?.toString().slice(0, 5)}</td>
                   <td className="p-5 font-bold text-slate-700">{cat.name || cat.Name}</td>
                   <td className="p-5 flex justify-center gap-2">
-                    <button 
+                    <button
                       onClick={() => startEdit(cat)}
                       className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-colors"
                     >
-                      <Edit size={18}/>
+                      <Edit size={18} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(cat.id)}
                       className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                     >
-                      <Trash2 size={18}/>
+                      <Trash2 size={18} />
                     </button>
                   </td>
                 </tr>

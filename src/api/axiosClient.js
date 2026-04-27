@@ -4,6 +4,7 @@ const axiosClient = axios.create({
   baseURL: 'https://asp-net-11.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
 });
 
@@ -47,7 +48,7 @@ axiosClient.interceptors.response.use(
 
     // 2. Log lỗi chi tiết để chủ nhân dễ fix khi nhìn vào Console
     console.error("API Error:", error.response?.data || error.message);
-    
+
     return Promise.reject(error);
   }
 );

@@ -27,9 +27,9 @@ const Dashboard = () => {
         <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
           <BarChart3 className="text-blue-600" /> Bảng điều khiển
         </h1>
-        <p className="text-slate-500 mt-1">Chào mừng Anh Minh quay trở lại! Dưới đây là tình hình thư viện hôm nay.</p>
+
       </div>
-      
+
       {/* Thẻ thống kê (Stats Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-3xl shadow-xl shadow-blue-200 relative overflow-hidden group">
@@ -69,7 +69,7 @@ const Dashboard = () => {
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-50 flex justify-between items-center">
           <h2 className="text-lg font-bold text-slate-800">Hoạt động mượn sách gần đây</h2>
-          <button className="text-sm text-blue-600 font-semibold hover:underline">Xem tất cả</button>
+
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -86,7 +86,7 @@ const Dashboard = () => {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                        <User size={16}/>
+                        <User size={16} />
                       </div>
                       <span className="font-semibold text-slate-700">{item.borrowerName || "Độc giả ẩn danh"}</span>
                     </div>
@@ -102,11 +102,10 @@ const Dashboard = () => {
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${
-                      item.status === 0 
-                        ? 'bg-amber-100 text-amber-700' 
-                        : 'bg-green-100 text-green-700'
-                    }`}>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${item.status === 0
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-green-100 text-green-700'
+                      }`}>
                       {item.status === 0 ? 'Chưa trả' : 'Đã trả'}
                     </span>
                   </td>
