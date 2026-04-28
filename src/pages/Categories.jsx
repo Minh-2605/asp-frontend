@@ -51,8 +51,9 @@ const Categories = () => {
 
   // Khi bấm nút Sửa trên dòng
   const startEdit = (cat) => {
-    setEditingId(cat.id);
-    setName(cat.name || cat.Name); // Đưa tên cũ lên ô input
+    const id = cat.id ?? cat.Id; // Lấy cả hai trường hợp hoa/thường
+    setEditingId(id);
+    setName(cat.name || cat.Name);
   };
 
   const cancelEdit = () => {
@@ -61,7 +62,8 @@ const Categories = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Chủ nhân có chắc muốn xóa?")) {
+    if (!id) return alert("Không tìm thấy mã danh mục!");
+    if (window.confirm("Bạn có chắc muốn xóa?")) {
       try {
         await axiosClient.delete(`/Categories/${id}`);
         fetchCategories();
@@ -136,7 +138,7 @@ const Categories = () => {
                       <Edit size={18} />
                     </button>
                     <button
-                      onClick={() => handleDelete(cat.id)}
+                      onClick={() => handleDelete(cat.id ?? cat.Id)}
                       className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                     >
                       <Trash2 size={18} />

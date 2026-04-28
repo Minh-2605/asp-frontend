@@ -1,14 +1,21 @@
 /* eslint-disable */
 import React, { useEffect, useState } from 'react';
 import axiosClient from '../api/axiosClient';
-import { Plus, Edit, Trash2, X, BookOpen, Calendar, Image as ImageIcon } from 'lucide-react';
+import {
+  Plus, Edit, Trash2, X, BookOpen, Calendar,
+  Image as ImageIcon, Search, Filter, BookText
+} from 'lucide-react';
 
 const Books = () => {
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
-  // State dùng camelCase để đồng bộ với logic xử lý bên dưới
+
+  // States cho tìm kiếm và lọc
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
   const [currentBook, setCurrentBook] = useState({
     title: '', author: '', categoryId: '', status: 'Available',
     image: '', quantity: 0
@@ -18,28 +25,22 @@ const Books = () => {
   const storedUser = JSON.parse(localStorage.getItem('user'));
   const isAdmin = storedUser?.role === 'Admin';
 
-  // --- LOGIC TẢI DỮ LIỆU & CHUẨN HÓA ---
   const fetchData = async () => {
-    // 1. Lấy Categories trước
     try {
-      const catsRes = await axiosClient.get('/Categories');
+      const [catsRes, booksRes] = await Promise.all([
+        axiosClient.get('/Categories'),
+        axiosClient.get('/Books')
+      ]);
+
       const rawCats = catsRes.data || catsRes;
       setCategories(rawCats.map(c => ({
         id: c.id ?? c.Id,
         name: c.name ?? c.Name
       })));
-    } catch (err) { console.error("Lỗi Categories:", err); }
 
-    // 2. Lấy Books sau (Tách ra để lỗi Books không làm mất Categories)
-    try {
-      const booksRes = await axiosClient.get('/Books');
       const rawBooks = booksRes.data || booksRes;
-
-      // Log ra để xem cấu trúc thực tế
-      console.log("Dữ liệu Books từ API:", rawBooks);
-
       if (Array.isArray(rawBooks)) {
-        const normalizedBooks = rawBooks.map(b => ({
+        setBooks(rawBooks.map(b => ({
           id: b.id ?? b.Id,
           title: b.title ?? b.Title,
           author: b.author ?? b.Author,
@@ -47,37 +48,87 @@ const Books = () => {
           quantity: b.quantity ?? b.Quantity,
           image: b.image ?? b.Image,
           status: b.status ?? b.Status
-        }));
-        setBooks(normalizedBooks);
+        })));
       }
     } catch (err) {
-      console.error("Lỗi Books:", err);
+      console.error("Lỗi tải dữ liệu:", err);
     }
   };
 
   useEffect(() => { fetchData(); }, []);
 
+  // --- LOGIC TÌM KIẾM VÀ LỌC ---
+  const filteredBooks = books.filter(book => {
+    const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      book.author.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "All" || String(book.categoryId) === String(selectedCategory);
+    return matchesSearch && matchesCategory;
+  });
+
   const getCategoryName = (id) => {
     const cat = categories.find(c => Number(c.id) === Number(id));
-    // Kiểm tra cả 'name' và 'Name' để chắc chắn không bị trống tên thể loại trên bảng
     return cat ? (cat.name || cat.Name) : 'Chưa phân loại';
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Chủ nhân có chắc chắn muốn xóa cuốn sách này không?")) {
+      try {
+        await axiosClient.delete(`/Books/${id}`);
+        alert("Xóa sách thành công!");
+        fetchData(); // Tải lại danh sách sau khi xóa
+      } catch (err) {
+        console.error("Lỗi khi xóa:", err);
+        alert("Không thể xóa sách. Có thể sách này đang được mượn!");
+      }
+    }
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setCurrentBook({ ...currentBook, image: reader.result });
-      };
+      reader.onloadend = () => setCurrentBook({ ...currentBook, image: reader.result });
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBorrowSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Lấy thông tin user từ localStorage
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+
+      const borrowData = {
+        // 1. Phải khớp chính xác tên thuộc tính trong Borrow.cs (viết hoa chữ cái đầu)
+        BookId: currentBook.Id ?? currentBook.id,
+        UserId: storedUser?.Id ?? storedUser?.id, // Đảm bảo đây là chuỗi GUID
+        BorrowerName: storedUser?.FullName ?? storedUser?.UserName ?? "Người mượn", // BẮT BUỘC có trường này
+        BorrowDate: new Date().toISOString(),
+        DueDate: new Date(dueDate).toISOString(),
+        Status: 0, // 0 tương ứng với BorrowStatus.BORROWED trong C#
+        CreatedAt: new Date().toISOString()
+      };
+
+      console.log("Dữ liệu gửi đi:", borrowData);
+
+      // 2. Sử dụng đúng endpoint /Borrows (đã xác nhận ở bước trước)
+      await axiosClient.post('/Borrows', borrowData);
+
+      alert("Mượn sách thành công!");
+      setIsBorrowModalOpen(false);
+      fetchData(); // Cập nhật lại số lượng sách trên giao diện
+    } catch (err) {
+      console.error("Lỗi chi tiết:", err.response?.data);
+      const errorMsg = err.response?.data?.errors
+        ? JSON.stringify(err.response.data.errors)
+        : "Kiểm tra lại BorrowerName hoặc UserId (phải là GUID)!";
+      alert("Không thể mượn sách: " + errorMsg);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Gửi dữ liệu theo đúng tên thuộc tính trong C# Model (PascalCase)
       const dataToSave = {
         Title: currentBook.title,
         Author: currentBook.author,
@@ -88,136 +139,147 @@ const Books = () => {
       };
 
       if (currentBook.id) {
-        // Nếu là sửa, cần gửi cả Id
-        await axiosClient.put(`/Books/${currentBook.id}`, {
-          Id: currentBook.id,
-          ...dataToSave
-        });
+        await axiosClient.put(`/Books/${currentBook.id}`, { Id: currentBook.id, ...dataToSave });
       } else {
         await axiosClient.post('/Books', dataToSave);
       }
       setIsModalOpen(false);
       fetchData();
     } catch (err) {
-      alert("Lỗi: " + (err.response?.data?.title || "Không thể lưu sách"));
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Xóa cuốn sách này?")) {
-      await axiosClient.delete(`/Books/${id}`);
-      fetchData();
-    }
-  };
-
-  const handleBorrowSubmit = async (e) => {
-    e.preventDefault();
-    if (!storedUser?.id) {
-      alert("Vui lòng đăng nhập lại để mượn sách!");
-      return;
-    }
-
-    const payload = {
-      bookId: currentBook.id,
-      userId: storedUser.id,
-      borrowerName: storedUser.username,
-      dueDate: new Date(dueDate).toISOString(),
-    };
-
-    try {
-      await axiosClient.post('/Borrows', payload);
-      alert(`🎉 Đã đăng ký mượn cuốn: ${currentBook.title}`);
-      setIsBorrowModalOpen(false);
-      setDueDate('');
-      fetchData();
-    } catch (err) {
-      alert("Lỗi: " + (err.response?.data || "Không thể mượn sách"));
+      alert("Lỗi lưu sách!");
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Thư viện sách</h1>
-          <p className="text-sm text-slate-500 font-medium">Xin chào, <span className="text-blue-600">{storedUser?.username}</span></p>
+    <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+
+        {/* HEADER SECTION */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+          <div>
+            <h1 className="text-4xl font-[900] text-slate-900 tracking-tight flex items-center gap-3">
+              <BookText className="text-blue-600" size={36} />
+              THƯ VIỆN SÁCH
+            </h1>
+            <p className="text-slate-500 font-medium mt-1">
+              Quản lý và mượn sách trực tuyến • Chào, <span className="text-blue-600 font-bold">{storedUser?.username}</span>
+            </p>
+          </div>
+
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setCurrentBook({ title: '', author: '', categoryId: categories[0]?.id || '', status: 'Available', image: '', quantity: 0 });
+                setIsModalOpen(true);
+              }}
+              className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 active:scale-95"
+            >
+              <Plus size={20} /> Thêm sách mới
+            </button>
+          )}
         </div>
 
-        {isAdmin && (
-          <button
-            onClick={() => {
-              setCurrentBook({ title: '', author: '', categoryId: categories[0]?.id || '', status: 'Available', image: '', quantity: 0 });
-              setIsModalOpen(true);
-            }}
-            className="bg-blue-600 text-white px-5 py-2.5 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-700 transition shadow-lg shadow-blue-100"
-          >
-            <Plus size={20} /> Thêm sách mới
-          </button>
-        )}
-      </div>
+        {/* SEARCH & FILTER BAR */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="md:col-span-2 relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên sách hoặc tác giả..."
+              className="w-full bg-white border-none shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 p-4 pl-12 rounded-2xl outline-none transition-all font-medium text-slate-600"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-      {/* TABLE HIỂN THỊ */}
-      <div className="bg-white shadow-xl shadow-slate-100 border border-slate-100 rounded-[2rem] overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-400 font-black text-[11px] uppercase tracking-widest border-b">
-            <tr>
-              <th className="p-6">Thông tin sách</th>
-              <th className="p-6">Thể loại</th>
-              <th className="p-6 text-center">Kho</th>
-              <th className="p-6 text-center">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {books.map(book => (
-              <tr key={book.id} className="hover:bg-slate-50/50 transition group">
-                <td className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-20 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 shadow-sm">
-                      {book.image ? (
-                        <img src={book.image} alt="book" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon size={20} /></div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-black text-slate-800 text-lg uppercase leading-tight">{book.title}</div>
-                      <div className="text-sm text-slate-400 font-bold">{book.author}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="p-6">
-                  <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                    {getCategoryName(book.categoryId)}
-                  </span>
-                </td>
-                <td className="p-6 text-center font-black text-slate-600">
-                  {book.quantity}
-                </td>
-                <td className="p-6 text-center">
-                  <div className="flex justify-center gap-3">
-                    {isAdmin ? (
-                      <>
-                        <button onClick={() => { setCurrentBook(book); setIsModalOpen(true); }} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Edit size={20} /></button>
-                        <button onClick={() => handleDelete(book.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={20} /></button>
-                      </>
-                    ) : (
-                      book.quantity > 0 ? (
-                        <button
-                          onClick={() => { setCurrentBook(book); setIsBorrowModalOpen(true); }}
-                          className="bg-emerald-600 text-white px-5 py-2 rounded-xl font-black flex items-center gap-1 hover:bg-emerald-700 transition-all text-xs shadow-lg shadow-emerald-100"
-                        >
-                          <BookOpen size={16} /> MƯỢN NGAY
-                        </button>
-                      ) : (
-                        <span className="bg-slate-100 text-slate-400 px-5 py-2 rounded-xl text-xs font-black uppercase tracking-tighter">Hết sách</span>
-                      )
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          <div className="relative">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <select
+              className="w-full bg-white border-none shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 p-4 pl-12 rounded-2xl outline-none transition-all font-bold text-slate-600 appearance-none"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <option value="All">Tất cả thể loại</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* MAIN DATA TABLE */}
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="px-8 py-5 text-left text-[11px] font-black uppercase tracking-widest text-slate-400">Thông tin sách</th>
+                  <th className="px-8 py-5 text-left text-[11px] font-black uppercase tracking-widest text-slate-400">Thể loại</th>
+                  <th className="px-8 py-5 text-center text-[11px] font-black uppercase tracking-widest text-slate-400">Số lượng</th>
+                  <th className="px-8 py-5 text-center text-[11px] font-black uppercase tracking-widest text-slate-400">Hành động</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredBooks.map(book => (
+                  <tr key={book.id} className="hover:bg-blue-50/30 transition-all group">
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-5">
+                        <div className="w-16 h-24 bg-slate-100 rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200 transition-transform group-hover:scale-105">
+                          {book.image ? (
+                            <img src={book.image} alt="cover" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon size={24} /></div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-black text-slate-800 text-lg uppercase tracking-tight leading-tight">{book.title}</div>
+                          <div className="text-sm text-slate-400 font-bold mt-1">Tác giả: {book.author}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="inline-flex items-center px-4 py-1.5 rounded-xl bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-tighter ring-1 ring-blue-100">
+                        {getCategoryName(book.categoryId)}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 text-center">
+                      <div className={`text-xl font-black ${book.quantity > 0 ? 'text-slate-700' : 'text-red-400'}`}>
+                        {book.quantity}
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">quyển</div>
+                    </td>
+                    <td className="px-8 py-5 text-center">
+                      <div className="flex justify-center gap-2">
+                        {isAdmin ? (
+                          <>
+                            <button onClick={() => { setCurrentBook(book); setIsModalOpen(true); }} className="p-3 bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all"><Edit size={18} /></button>
+                            <button onClick={() => handleDelete(book.id)} className="p-3 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
+                          </>
+                        ) : (
+                          book.quantity > 0 ? (
+                            <button
+                              onClick={() => { setCurrentBook(book); setIsBorrowModalOpen(true); }}
+                              className="bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-600 transition-all text-xs shadow-lg shadow-emerald-100 active:scale-95"
+                            >
+                              <BookOpen size={16} /> MƯỢN SÁCH
+                            </button>
+                          ) : (
+                            <span className="bg-slate-100 text-slate-400 px-6 py-2.5 rounded-xl text-xs font-black uppercase">Đã hết</span>
+                          )
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredBooks.length === 0 && (
+              <div className="p-20 text-center text-slate-400 font-bold italic">
+                Không tìm thấy cuốn sách nào phù hợp...
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* MODAL ADMIN: THÊM/SỬA */}

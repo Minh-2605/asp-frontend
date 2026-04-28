@@ -50,13 +50,15 @@ const Sidebar = () => {
     <div className="w-64 bg-slate-950 h-screen text-white p-4 fixed left-0 top-0 flex flex-col border-r border-slate-800 shadow-2xl">
       {/* Header Sidebar */}
       <div className="mb-10 px-4 py-2 bg-gradient-to-r from-blue-600/20 to-transparent rounded-2xl border border-blue-500/20">
-        <div className="flex items-center gap-2 mb-1">
-          <Library size={24} className="text-blue-400" />
-          <h2 className="text-lg font-black text-white uppercase tracking-tighter">Thư viện</h2>
-        </div>
-        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-          {isAdmin ? "Ban Quản Trị" : "Cổng Thành Viên"}
-        </p>
+        <Link to="/">
+          <div className="flex items-center gap-2 mb-1">
+            <Library size={24} className="text-blue-400 group-hover:scale-110 transition-transform" />
+            <h2 className="text-lg font-black text-white uppercase tracking-tighter">Thư viện</h2>
+          </div>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            {isAdmin ? "Ban Quản Trị" : "Cổng Thành Viên"}
+          </p>
+        </Link>
       </div>
 
       {/* Navigation Links - Chỉ map danh sách đã lọc */}
