@@ -244,6 +244,9 @@ const Borrows = () => {
                 <th className="p-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Phí trễ</th>
               )}
               {isAdmin && (
+                <th className="p-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Phí trễ</th>
+              )}
+              {isAdmin && (
                 <th className="p-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Hành động</th>
               )}
             </tr>
@@ -291,10 +294,18 @@ const Borrows = () => {
                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase
                       ${item.status === 1
                         ? 'bg-emerald-100 text-emerald-700'
-                        : overdue
-                          ? 'bg-rose-100 text-rose-700'
-                          : 'bg-amber-100 text-amber-700'}`}>
-                      {item.status === 1 ? 'Đã trả' : overdue ? 'Quá hạn' : 'Đang mượn'}
+                        : overdue && alreadyPaid
+                          ? 'bg-violet-100 text-violet-700'
+                          : overdue
+                            ? 'bg-rose-100 text-rose-700'
+                            : 'bg-amber-100 text-amber-700'}`}>
+                      {item.status === 1
+                        ? 'Đã trả'
+                        : overdue && alreadyPaid
+                          ? 'Đã trả phí muộn'
+                          : overdue
+                            ? 'Quá hạn'
+                            : 'Đang mượn'}
                     </span>
                   </td>
 
@@ -323,17 +334,46 @@ const Borrows = () => {
                     </td>
                   )}
 
+                  {/* Cột phí trễ (admin) */}
+                  {isAdmin && (
+                    <td className="p-6 text-center">
+                      {overdue && item.status !== 1 ? (
+                        alreadyPaid ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-violet-50 text-violet-600 text-[10px] font-black uppercase border border-violet-200">
+                            ✓ Đã trả phí
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-50 text-rose-500 text-[10px] font-black uppercase border border-rose-200">
+                            ✗ Chưa trả phí
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-slate-300 text-xs">—</span>
+                      )}
+                    </td>
+                  )}
+
                   {/* Cột hành động (admin) */}
                   {isAdmin && (
                     <td className="p-6">
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-2 flex-wrap">
                         {item.status !== 1 && (
-                          <button
-                            onClick={() => handleReturn(item.id)}
-                            className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-emerald-700 shadow-lg shadow-emerald-100"
-                          >
-                            TRẢ SÁCH
-                          </button>
+                          overdue && !alreadyPaid ? (
+                            <button
+                              onClick={() => handleReturn(item.id)}
+                              title="Người dùng chưa trả phí trễ"
+                              className="bg-orange-500 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-orange-600 shadow-lg shadow-orange-100 flex items-center gap-1"
+                            >
+                              <span>⚠</span> TRẢ SÁCH
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleReturn(item.id)}
+                              className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-emerald-700 shadow-lg shadow-emerald-100"
+                            >
+                              TRẢ SÁCH
+                            </button>
+                          )
                         )}
                         <button
                           onClick={() => handleDelete(item.id)}
