@@ -32,24 +32,33 @@ const Books = () => {
         axiosClient.get('/Books')
       ]);
 
-      const rawCats = catsRes.data || catsRes;
-      setCategories(rawCats.map(c => ({
+      // Xử lý cả dạng thường và dạng { $values: [...] } của .NET
+      const catsData = catsRes.data ?? catsRes;
+      const rawCats = Array.isArray(catsData)
+        ? catsData
+        : (catsData?.$values ?? []);
+
+      const mappedCats = rawCats.map(c => ({
         id: c.id ?? c.Id,
         name: c.name ?? c.Name
+      }));
+      setCategories(mappedCats);
+
+      const booksData = booksRes.data ?? booksRes;
+      const rawBooks = Array.isArray(booksData)
+        ? booksData
+        : (booksData?.$values ?? []);
+
+      setBooks(rawBooks.map(b => ({
+        id: b.id ?? b.Id,
+        title: b.title ?? b.Title,
+        author: b.author ?? b.Author,
+        categoryId: b.categoryId ?? b.CategoryId,
+        quantity: b.quantity ?? b.Quantity,
+        image: b.image ?? b.Image,
+        status: b.status ?? b.Status
       })));
 
-      const rawBooks = booksRes.data || booksRes;
-      if (Array.isArray(rawBooks)) {
-        setBooks(rawBooks.map(b => ({
-          id: b.id ?? b.Id,
-          title: b.title ?? b.Title,
-          author: b.author ?? b.Author,
-          categoryId: b.categoryId ?? b.CategoryId,
-          quantity: b.quantity ?? b.Quantity,
-          image: b.image ?? b.Image,
-          status: b.status ?? b.Status
-        })));
-      }
     } catch (err) {
       console.error("Lỗi tải dữ liệu:", err);
     }
